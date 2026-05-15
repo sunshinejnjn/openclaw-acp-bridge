@@ -1,0 +1,2 @@
+# Requirements for openclaw_acp_bridge
+agent-client-protocol>=0.10.0

@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "openclaw-acp-bridge"
+version = "0.3.2"
+authors = [
+    { name = "sunshinejnjn@github" },
+]
+license = { text = "BSD-3-Clause" }
+description = "A high-performance persistent TCP bridge and async client for OpenClaw ACP"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Topic :: Communications :: Chat",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "httpx>=0.24.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/sunshinejnjn/openclaw-acp-bridge"
+"Bug Tracker" = "https://github.com/sunshinejnjn/openclaw-acp-bridge/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["openclaw_acp_bridge*"]

@@ -1,0 +1,6 @@
+{
+    "host": "localhost",
+    "port": 18781,
+    "token": "your-token-here",
+    "download_dir": "test_downloads"
+}
