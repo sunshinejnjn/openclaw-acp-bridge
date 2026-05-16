@@ -206,11 +206,18 @@ class OpenClaw:
         full_text = "".join(self._internal_client.current_response_chunks)
         full_files = list(self._internal_client.received_files)
         
-        # New: Auto-request files marked with [FILEPATH: ...]
+        # New: Auto-request files marked with [FILEPATH: ...] or file:/// URLs
         import re
-        explicit_paths = re.findall(r'\[FILEPATH:\s*<?([a-zA-Z0-9\._\-/]+)>?\]', full_text)
+        # Catch [FILEPATH: ...], [📎 ...](file:///...), or just file:///...
+        explicit_paths = re.findall(r'\[FILEPATH:\s*<?([^\]>]+)>?\]', full_text)
+        file_urls = re.findall(r'file:///([^\s\)\n\r]+)', full_text)
         
-        for path in explicit_paths:
+        # Combine and deduplicate
+        all_paths_to_request = list(set(explicit_paths + file_urls))
+        
+        for path in all_paths_to_request:
+            # Ensure we have the full path if it's a relative-looking one from the AI
+            # But usually they are absolute paths from the remote system
             # We call the underlying logic to fetch the file without resetting the whole session state
             self._internal_client.current_response_chunks = []
             self._internal_client.received_files = []
