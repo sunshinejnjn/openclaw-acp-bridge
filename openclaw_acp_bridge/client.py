@@ -1,5 +1,6 @@
 import asyncio
 import os
+import re
 import base64
 import shutil
 import httpx
@@ -207,7 +208,6 @@ class OpenClaw:
         full_files = list(self._internal_client.received_files)
         
         # New: Auto-request files marked with [FILEPATH: ...] or file:/// URLs
-        import re
         # Catch [FILEPATH: ...], [📎 ...](file:///...), or just file:///...
         explicit_paths = re.findall(r'\[FILEPATH:\s*<?([^\]>]+)>?\]', full_text)
         file_urls = re.findall(r'file:///([^\s\)\n\r]+)', full_text)
@@ -301,7 +301,6 @@ class OpenClaw:
         full_text = "".join(self._internal_client.current_response_chunks)
         full_files = list(self._internal_client.received_files)
         
-        import re
         explicit_paths = re.findall(r'\[FILEPATH:\s*<?([^\]>]+)>?\]', full_text)
         file_urls = re.findall(r'file:///([^\s\)\n\r]+)', full_text)
         all_paths_to_request = list(set(explicit_paths + file_urls))
