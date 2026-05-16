@@ -11,6 +11,7 @@ The **OpenClaw ACP Bridge** solves the challenge of maintaining persistent agent
 - **High-Speed HTTP Side-Channel**: Automatically switches to HTTP streaming for large files (GB-sized), bypassing JSON-RPC/Base64 overhead and memory bloat.
 - **Explicit File Interception**: Use `/filerequest <path>` to instantly fetch any file from the remote agent's filesystem.
 - **Improved Auto-File Retrieval**: Intelligently detects `[FILEPATH: /path/to/file]` and `file:///path/to/file` patterns in agent responses and automatically initiates a high-speed transfer.
+- **Zero-Wait Synchronization**: New v0.5.0 client ensures all background image downloads are fully synchronized before yielding final responses, eliminating race conditions in high-concurrency environments.
 - **Async/Non-Blocking**: Built from the ground up for `asyncio`, utilizing `httpx` for reliable binary streaming.
 - **Environment Consistency**: Server-side agent launching utilizes interactive shells (`bash -i`) to ensure `.bashrc`, NVM, and local paths are correctly resolved.
 

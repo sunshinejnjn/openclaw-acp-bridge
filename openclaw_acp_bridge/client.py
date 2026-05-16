@@ -313,9 +313,17 @@ class OpenClaw:
                 message_id=str(uuid4())
             )
             if self._internal_client.active_tasks:
-                await asyncio.gather(*self._internal_client.active_tasks)
+                await asyncio.gather(*self._internal_client.active_tasks, return_exceptions=True)
                 self._internal_client.active_tasks = []
             full_files.extend(self._internal_client.received_files)
+
+        # Final check for any lingering background tasks
+        if self._internal_client.active_tasks:
+            await asyncio.gather(*self._internal_client.active_tasks, return_exceptions=True)
+            self._internal_client.active_tasks = []
+            
+        # Re-sync files after any final downloads
+        full_files = list(set(full_files + self._internal_client.received_files))
             
         yield ChatResponse(text=full_text, files=full_files)
 
