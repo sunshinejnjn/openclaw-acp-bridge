@@ -7,9 +7,10 @@ The **OpenClaw ACP Bridge** solves the challenge of maintaining persistent agent
 ## 🚀 Key Features
 
 - **Persistent Agent Session**: Unlike standard ACP tools that may restart agents per request, the bridge maintains a single persistent agent process across multiple client turns.
+- **Real-time Response Streaming**: Stream agent responses token-by-token (chunk-by-chunk) for an interactive, low-latency UI experience.
 - **High-Speed HTTP Side-Channel**: Automatically switches to HTTP streaming for large files (GB-sized), bypassing JSON-RPC/Base64 overhead and memory bloat.
 - **Explicit File Interception**: Use `/filerequest <path>` to instantly fetch any file from the remote agent's filesystem.
-- **Auto-File Retrieval**: Intelligently detects the `[FILEPATH: /path/to/file]` pattern in agent responses and automatically initiates a high-speed transfer.
+- **Improved Auto-File Retrieval**: Intelligently detects `[FILEPATH: /path/to/file]` and `file:///path/to/file` patterns in agent responses and automatically initiates a high-speed transfer.
 - **Async/Non-Blocking**: Built from the ground up for `asyncio`, utilizing `httpx` for reliable binary streaming.
 - **Environment Consistency**: Server-side agent launching utilizes interactive shells (`bash -i`) to ensure `.bashrc`, NVM, and local paths are correctly resolved.
 
@@ -52,11 +53,15 @@ async def main():
         response = await client.chat("Hello, who are you?")
         print(f"Agent: {response.text}")
 
-        # 2. Explicit File Request
-        # This uses the high-speed side-channel automatically
-        response = await client.chat("/filerequest /path/to/large_dataset.zip")
-        if response.files:
-            print(f"Received file: {response.files[0]}")
+        # 2. Real-time Streaming
+        async for chunk in client.chat_stream("Explain quantum physics simply."):
+            if isinstance(chunk, str):
+                print(chunk, end="", flush=True)
+            else:
+                # Final response object containing full text and file paths
+                print(f"\nFinal response has {len(chunk.files)} files.")
+
+        # 3. Explicit File Request
 
         # 3. Auto-Retrieval Pattern
         # Ask the agent to generate something and return the path
