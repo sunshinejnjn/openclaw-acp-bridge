@@ -238,6 +238,88 @@ class OpenClaw:
             
         return ChatResponse(text=full_text, files=full_files)
 
+    async def chat_stream(self, message: str):
+        """
+        An async generator that yields chunks of text as they arrive from OpenClaw.
+        Yields strings. The final yield will be a ChatResponse object containing the full history and files.
+        """
+        if not self._conn or not self.session:
+            raise RuntimeError("Client is not connected. Call connect() or use 'async with'.")
+            
+        self._internal_client.current_response_chunks = []
+        self._internal_client.received_files = []
+        
+        queue = asyncio.Queue()
+        
+        # We wrap the existing on_update to also feed our queue
+        original_on_update = self._internal_client.on_update
+        
+        async def streaming_callback(session_id, update):
+            if original_on_update:
+                if asyncio.iscoroutinefunction(original_on_update):
+                    await original_on_update(session_id, update)
+                else:
+                    original_on_update(session_id, update)
+            
+            # Extract text chunk
+            update_type = getattr(update, 'session_update', getattr(update, 'sessionUpdate', None))
+            if update_type == 'agent_message_chunk':
+                content = getattr(update, 'content', None)
+                if content and getattr(content, 'type', None) == 'text':
+                    text = getattr(content, 'text', None)
+                    if text: await queue.put(text)
+        
+        self._internal_client.on_update = streaming_callback
+        
+        # Start the prompt in a task
+        prompt_task = asyncio.create_task(self._conn.prompt(
+            session_id=self.session.session_id,
+            prompt=[text_block(message)],
+            message_id=str(uuid4())
+        ))
+        
+        # Yield from queue until prompt_task is done
+        while not prompt_task.done() or not queue.empty():
+            try:
+                # Use wait_for to check prompt_task status periodically
+                chunk = await asyncio.wait_for(queue.get(), timeout=0.1)
+                yield chunk
+            except asyncio.TimeoutError:
+                continue
+        
+        await prompt_task # Ensure exceptions are raised
+        
+        # Wait for any background downloads
+        if self._internal_client.active_tasks:
+            await asyncio.gather(*self._internal_client.active_tasks)
+            self._internal_client.active_tasks = []
+            
+        # Restore callback
+        self._internal_client.on_update = original_on_update
+        
+        # Handle auto-requests (these are non-streaming for now but we yield the result)
+        full_text = "".join(self._internal_client.current_response_chunks)
+        full_files = list(self._internal_client.received_files)
+        
+        import re
+        explicit_paths = re.findall(r'\[FILEPATH:\s*<?([^\]>]+)>?\]', full_text)
+        file_urls = re.findall(r'file:///([^\s\)\n\r]+)', full_text)
+        all_paths_to_request = list(set(explicit_paths + file_urls))
+        
+        for path in all_paths_to_request:
+            self._internal_client.received_files = []
+            await self._conn.prompt(
+                session_id=self.session.session_id,
+                prompt=[text_block(f"/filerequest {path}")],
+                message_id=str(uuid4())
+            )
+            if self._internal_client.active_tasks:
+                await asyncio.gather(*self._internal_client.active_tasks)
+                self._internal_client.active_tasks = []
+            full_files.extend(self._internal_client.received_files)
+            
+        yield ChatResponse(text=full_text, files=full_files)
+
     async def close(self):
         """Gracefully closes the connection."""
         if self._conn:
