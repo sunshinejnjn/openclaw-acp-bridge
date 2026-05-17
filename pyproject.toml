@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "openclaw-acp-bridge"
-version = "0.5.0"
+version = "0.5.1"
 authors = [
     { name = "sunshinejnjn@github" },
 ]
 license = { text = "BSD-3-Clause" }
-description = "A high-performance persistent TCP bridge and async client for OpenClaw ACP"
+description = "A high-performance TCP bridge and async client for OpenClaw ACP. Make your OpenClaw Agent an ACP server on TCP! Call OpenClaw in your python projects with ease!"
 readme = "README.md"
 requires-python = ">=3.8"
 classifiers = [

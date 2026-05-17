@@ -11,3 +11,4 @@ test_downloads/
 server.log
 token.txt
 config.json
+.pypirc

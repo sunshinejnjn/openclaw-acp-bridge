@@ -1,6 +1,6 @@
 # OpenClaw ACP Bridge
 
-A high-performance, persistent TCP bridge and client for the OpenClaw Agent Control Protocol (ACP).
+A high-performance TCP bridge and async client for OpenClaw ACP. Make your OpenClaw Agent an ACP server on TCP! Call OpenClaw in your python projects with ease!
 
 The **OpenClaw ACP Bridge** solves the challenge of maintaining persistent agent sessions over standard TCP while providing a high-speed "side-channel" for large-scale file transfers. It is designed for high-performance agentic workflows where large binary assets (images, videos, datasets) need to be moved efficiently between remote agents and local clients.
 
