@@ -54,8 +54,53 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
     else:
         print("Side-channel HTTP server disabled. Using Base64 blobs for all transfers.")
 
-    # Launch OpenClaw ACP as a persistent subprocess
-    # Using bash -i -c to ensure the user's .bashrc (and NVM paths) are loaded
+    # Helper to restart the persistent OpenClaw process
+    async def restart_openclaw_process():
+        global process
+        print("⚠️ Restarting persistent OpenClaw ACP subprocess...", file=sys.stderr)
+        if process:
+            try:
+                process.terminate()
+                await process.wait()
+            except Exception as e:
+                if is_debug:
+                    print(f"Error terminating process: {e}", file=sys.stderr)
+        
+        process = await asyncio.create_subprocess_exec(
+            "bash", "-i", "-c", f"{openclaw_path} acp",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=sys.stderr
+        )
+        print("Fresh OpenClaw ACP subprocess launched successfully.", file=sys.stderr)
+        asyncio.create_task(agent_to_client(process))
+
+    # Start a background task to forward Agent stdout to all active clients
+    async def agent_to_client(current_process):
+        try:
+            async for line in current_process.stdout:
+                line_str = line.decode('utf-8', errors='ignore')
+                if is_debug:
+                    print(f"Agent -> Clients: {line_str.strip()}", file=sys.stderr)
+                
+                # Auto-heal on stale session
+                if "ACP_SESSION_INIT_FAILED" in line_str or "ACP metadata is missing" in line_str:
+                    print("⚠️ Stale session detected in agent output! Triggering auto-restart...", file=sys.stderr)
+                    # Trigger restart if this is still the active process
+                    if current_process == process:
+                        asyncio.create_task(restart_openclaw_process())
+                
+                if active_writer and current_process == process:
+                    try:
+                        active_writer.write(line)
+                        await active_writer.drain()
+                    except:
+                        pass
+        except Exception as e:
+            if is_debug:
+                print(f"Agent stream error: {e}", file=sys.stderr)
+
+    # Launch initial subprocess
     process = await asyncio.create_subprocess_exec(
         "bash", "-i", "-c", f"{openclaw_path} acp",
         stdin=asyncio.subprocess.PIPE,
@@ -63,27 +108,7 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
         stderr=sys.stderr # Forward stderr to see agent logs
     )
     print(f"TCP Bridge listening on {host}:{port}")
-
-    # Start a background task to forward Agent stdout to all active clients
-    async def agent_to_client():
-        try:
-            async for line in process.stdout:
-                line_str = line.decode('utf-8', errors='ignore')
-                if is_debug:
-                    print(f"Agent -> Clients: {line_str.strip()}", file=sys.stderr)
-                
-                if active_writer:
-                    try:
-                        active_writer.write(line)
-                        await active_writer.drain()
-                    except:
-                        pass
-        except Exception as e:
-            print(f"Agent stream error: {e}", file=sys.stderr)
-        except Exception as e:
-            print(f"Agent stream error: {e}", file=sys.stderr)
-
-    asyncio.create_task(agent_to_client())
+    asyncio.create_task(agent_to_client(process))
 
     async def handle_client(reader, writer):
         global active_writer
@@ -112,7 +137,10 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
 
         if active_writer is not None:
             print(f"Preempting existing connection from {active_writer.get_extra_info('peername')}", file=sys.stderr)
-            active_writer.close()
+            try:
+                active_writer.close()
+            except:
+                pass
 
         print(f"Client {addr} authenticated and connected successfully", file=sys.stderr)
         active_writer = writer
@@ -127,15 +155,27 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
                 if not line:
                     break
                 
+                # Check for raw plain-text control commands (e.g. /acp spawn, /restart, /reset)
+                line_str = line.decode('utf-8', errors='ignore').strip()
+                if line_str in ["/acp spawn", "/restart_acp", "/reset_acp", "/restart", "/reset"]:
+                    print(f"[{addr[0]}] Intercepted raw control command: {line_str}", file=sys.stderr)
+                    asyncio.create_task(restart_openclaw_process())
+                    try:
+                        writer.write(b"OK: Resetting OpenClaw ACP subprocess...\n")
+                        await writer.drain()
+                    except:
+                        pass
+                    continue
+
                 # Debug logging
                 if is_debug:
                     try:
                         tmp_data = json.loads(line)
                         p = tmp_data.get("params", {})
                         tmp_sid = p.get("sessionId", p.get("session_id", "no-session"))
-                        print(f"[{addr[0]}] [Session: {tmp_sid}] Client -> Agent: {line.decode('utf-8').strip()}", file=sys.stderr)
+                        print(f"[{addr[0]}] [Session: {tmp_sid}] Client -> Agent: {line_str}", file=sys.stderr)
                     except:
-                        print(f"[{addr[0]}] Client -> Agent: {line.decode('utf-8').strip()}", file=sys.stderr)
+                        print(f"[{addr[0]}] Client -> Agent: {line_str}", file=sys.stderr)
                 
                 # Interception Logic for Special Mode
                 intercepted = False
