@@ -43,7 +43,7 @@ def start_http_server(port):
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return port
 
-async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, openclaw_path="openclaw", use_http=True):
+async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, openclaw_path="openclaw", use_http=True, session=None, reset_session=False, agent="main"):
     global process, active_writer
 
     # Start side-channel HTTP server on port + 1
@@ -66,8 +66,14 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
                 if is_debug:
                     print(f"Error terminating process: {e}", file=sys.stderr)
         
+        cmd = f"{openclaw_path} acp"
+        if session:
+            cmd += f" --session {session}"
+        if reset_session:
+            cmd += " --reset-session"
+
         process = await asyncio.create_subprocess_exec(
-            "bash", "-i", "-c", f"{openclaw_path} acp",
+            "bash", "-i", "-c", cmd,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=sys.stderr
@@ -101,8 +107,14 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
                 print(f"Agent stream error: {e}", file=sys.stderr)
 
     # Launch initial subprocess
+    cmd = f"{openclaw_path} acp"
+    if session:
+        cmd += f" --session {session}"
+    if reset_session:
+        cmd += " --reset-session"
+
     process = await asyncio.create_subprocess_exec(
-        "bash", "-i", "-c", f"{openclaw_path} acp",
+        "bash", "-i", "-c", cmd,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         stderr=sys.stderr # Forward stderr to see agent logs

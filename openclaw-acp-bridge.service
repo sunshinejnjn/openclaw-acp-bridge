@@ -1,0 +1,26 @@
+[Unit]
+Description=OpenClaw ACP Bridge by jnjn
+After=openclaw-gateway.service
+Wants=openclaw-gateway.service
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+WorkingDirectory=/home/jnjn/acp_server
+ExecStart=/bin/bash /home/jnjn/acp_server/run_acp_server.sh
+Restart=always
+RestartSec=5
+RestartPreventExitStatus=78
+TimeoutStopSec=30
+TimeoutStartSec=30
+SuccessExitStatus=0 143
+KillMode=control-group
+
+# Ensure the user's NVM and standard path are available to the service
+Environment=PATH=/usr/bin:/home/jnjn/.local/share/pnpm:/home/jnjn/.nvm/versions/node/v24.15.0/bin:/home/jnjn/.local/bin:/home/jnjn/.npm-global/bin:/home/jnjn/bin:/home/jnjn/.bun/bin:/usr/local/bin:/bin
+Environment=HOME=/home/jnjn
+Environment=TMPDIR=/tmp
+
+[Install]
+WantedBy=default.target

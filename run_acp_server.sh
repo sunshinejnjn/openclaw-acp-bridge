@@ -4,6 +4,13 @@
 # OpenClaw ACP Bridge Server Launcher
 # =================================================================
 
+# Stop any conflicting openclaw-acp, run_acp_server.py or openclaw_acp_bridge processes
+echo "🧹 Stopping any existing openclaw-acp, run_acp_server.py, or openclaw_acp_bridge processes..."
+pkill -f openclaw-acp 2>/dev/null || true
+pkill -f run_acp_server.py 2>/dev/null || true
+pkill -f openclaw_acp_bridge 2>/dev/null || true
+sleep 1
+
 # 1. Authentication Token
 # If not specified here, the server will look for a 'token.txt' file.
 #TOKEN="your-secret-token"
@@ -15,6 +22,7 @@ OPENCLAW_PATH="openclaw"
 # 3. Server Configuration
 HOST="0.0.0.0"
 PORT=18781
+AGENT="agentchatter"
 
 # 4. Detect Python command
 if command -v python &> /dev/null; then
@@ -32,11 +40,12 @@ echo "🔢 Port: $PORT"
 echo "📂 Side-channel HTTP: $(($PORT + 1))"
 
 # Launch the server module
-$PYTHON_CMD -m openclaw_acp_bridge \
+exec $PYTHON_CMD -m openclaw_acp_bridge \
     --host "$HOST" \
     --port "$PORT" \
     --token "$TOKEN" \
     --openclaw-path "$OPENCLAW_PATH" \
+    --agent "$AGENT" \
     --debug
 
 # To disable the HTTP side-channel, add the --no-http flag above.

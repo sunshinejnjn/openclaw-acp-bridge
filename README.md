@@ -120,5 +120,16 @@ The package includes a comprehensive test suite `test_bridge.py` that demonstrat
 python test_bridge.py --tests 1,2,3,4
 ```
 
+## 🔄 Version 0.6.0 Updates
+
+- **Isolated Agent Targeting (`--agent <agent_name>`)**: Start the bridge with a specific agent name using the `--agent` parameter in the launcher. The bridge handles agent routing and isolated workspace initialization automatically.
+- **Spawned ACP Session Keys**: Spawns isolated session keys in the format `agent:<agent_name>:<session_id>` (e.g. `agent:agentchatter:acp`) instead of overriding the default `main (agent:main:main)` session. This enables multiple bridges and agents to run concurrently without session overlap.
+- **Self-Healing Conflict Resolution**: Automatically stops and resolves stale `openclaw-acp`, `run_acp_server.py`, or `openclaw_acp_bridge` daemon instances on server boot/restart to guarantee a fresh ACP TCP listener.
+- **Standardized systemd Service Template (`openclaw-acp-bridge.service`)**:
+  - Implements complete environment variables configuration (`PATH`, `HOME`, `TMPDIR`) to cleanly load NVM/Node paths.
+  - Implements optimized PID replacement (`exec` substitution) so systemd tracks the Python server directly as the `Main PID` instead of a bash wrapper script.
+  - Uses robust `KillMode=control-group` process management to prevent zombie or orphaned subprocesses.
+
 ## 📜 License
 BSD 3-Clause
+
