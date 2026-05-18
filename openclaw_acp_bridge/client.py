@@ -261,12 +261,24 @@ class OpenClaw:
                 else:
                     original_on_update(session_id, update)
             
+            # Robust attribute helper
+            def get_attr(obj, name, default=None):
+                if isinstance(obj, dict):
+                    val = obj.get(name)
+                    if val is not None: return val
+                    alt_name = name.replace("_", "") if "_" in name else name
+                    for k, v in obj.items():
+                        if k.lower() == name.lower() or k.lower() == alt_name.lower():
+                            return v
+                    return default
+                return getattr(obj, name, default)
+
             # Extract text chunk
-            update_type = getattr(update, 'session_update', getattr(update, 'sessionUpdate', None))
+            update_type = get_attr(update, 'session_update', get_attr(update, 'sessionUpdate'))
             if update_type == 'agent_message_chunk':
-                content = getattr(update, 'content', None)
-                if content and getattr(content, 'type', None) == 'text':
-                    text = getattr(content, 'text', None)
+                content = get_attr(update, 'content')
+                if content and get_attr(content, 'type') == 'text':
+                    text = get_attr(content, 'text')
                     if text: await queue.put(text)
         
         self._internal_client.on_update = streaming_callback

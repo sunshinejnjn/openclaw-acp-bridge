@@ -90,6 +90,8 @@ async def run_test(tests_to_run=None):
                     print("Failed: No files received for large file request.")
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         print(f"Test failed with error: {e}")
         print("\nTIP: Make sure the server is running with 'python -m openclaw_acp_bridge.server --debug'")
 
