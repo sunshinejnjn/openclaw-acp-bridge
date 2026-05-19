@@ -130,6 +130,13 @@ python test_bridge.py --tests 1,2,3,4
   - Implements optimized PID replacement (`exec` substitution) so systemd tracks the Python server directly as the `Main PID` instead of a bash wrapper script.
   - Uses robust `KillMode=control-group` process management to prevent zombie or orphaned subprocesses.
 
-## 📜 License
+## � Version 0.6.1 Updates
+
+- **Multimodal `chat_stream` Support**: `chat_stream()` now accepts an optional `image_data` (base64-encoded bytes) and `image_mime` parameter, allowing image+text prompts to be sent to the agent in a single streaming call. Enables i2i (image-to-image) and vision-based agentic workflows without a separate API.
+- **Proactive Dead-Process Detection on Connect**: The server now immediately checks whether the backing OpenClaw process is alive the moment a new client authenticates and connects, triggering an automatic `restart_openclaw_process()` before the first message is forwarded — preventing silent failures on stale sessions.
+- **Debug Log Truncation**: Agent↔Client log lines in `--debug` mode are now capped at 500 characters with a `... (truncated)` suffix, preventing log flooding when large base64 payloads (e.g. images) are exchanged.
+- **Increased TCP Read Buffer**: `asyncio.start_server` is now launched with `limit=16*1024*1024` (16 MB), supporting large prompt payloads such as base64-encoded images that exceed the previous default 64 KB stream buffer.
+
+## �📜 License
 BSD 3-Clause
 

@@ -87,7 +87,10 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
             async for line in current_process.stdout:
                 line_str = line.decode('utf-8', errors='ignore')
                 if is_debug:
-                    print(f"Agent -> Clients: {line_str.strip()}", file=sys.stderr)
+                    log_str = line_str.strip()
+                    if len(log_str) > 500:
+                        log_str = log_str[:500] + "... (truncated)"
+                    print(f"Agent -> Clients: {log_str}", file=sys.stderr)
                 
                 # Auto-heal on stale session
                 if "ACP_SESSION_INIT_FAILED" in line_str or "ACP metadata is missing" in line_str:
@@ -157,6 +160,10 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
         print(f"Client {addr} authenticated and connected successfully", file=sys.stderr)
         active_writer = writer
 
+        if process.returncode is not None:
+            print("⚠️ Client connected but backing OpenClaw process is dead. Restarting process...", file=sys.stderr)
+            await restart_openclaw_process()
+
         try:
             while True:
                 if process.returncode is not None:
@@ -181,13 +188,16 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
 
                 # Debug logging
                 if is_debug:
+                    log_str = line_str.strip()
+                    if len(log_str) > 500:
+                        log_str = log_str[:500] + "... (truncated)"
                     try:
                         tmp_data = json.loads(line)
                         p = tmp_data.get("params", {})
                         tmp_sid = p.get("sessionId", p.get("session_id", "no-session"))
-                        print(f"[{addr[0]}] [Session: {tmp_sid}] Client -> Agent: {line_str}", file=sys.stderr)
+                        print(f"[{addr[0]}] [Session: {tmp_sid}] Client -> Agent: {log_str}", file=sys.stderr)
                     except:
-                        print(f"[{addr[0]}] Client -> Agent: {line_str}", file=sys.stderr)
+                        print(f"[{addr[0]}] Client -> Agent: {log_str}", file=sys.stderr)
                 
                 # Interception Logic for Special Mode
                 intercepted = False
@@ -352,6 +362,6 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
                 active_writer = None
             writer.close()
 
-    server = await asyncio.start_server(handle_client, host, port)
+    server = await asyncio.start_server(handle_client, host, port, limit=16*1024*1024)
     async with server:
         await server.serve_forever()

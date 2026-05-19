@@ -238,7 +238,7 @@ class OpenClaw:
             
         return ChatResponse(text=full_text, files=full_files)
 
-    async def chat_stream(self, message: str):
+    async def chat_stream(self, message: str, image_data: Optional[str] = None, image_mime: str = "image/png"):
         """
         An async generator that yields chunks of text as they arrive from OpenClaw.
         Yields strings. The final yield will be a ChatResponse object containing the full history and files.
@@ -283,10 +283,15 @@ class OpenClaw:
         
         self._internal_client.on_update = streaming_callback
         
+        from acp import text_block, image_block
+        blocks = [text_block(message)]
+        if image_data:
+            blocks.insert(0, image_block(data=image_data, mime_type=image_mime))
+        
         # Start the prompt in a task
         prompt_task = asyncio.create_task(self._conn.prompt(
             session_id=self.session.session_id,
-            prompt=[text_block(message)],
+            prompt=blocks,
             message_id=str(uuid4())
         ))
         
