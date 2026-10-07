@@ -132,9 +132,9 @@ python test_bridge.py --tests 1,2,3,4
 
 ## 🚀 Version 0.7.0 Updates
 
-- **Universal File & Media Attachments**: Both chat() and chat_stream() now support an ttachments parameter accepting local file paths, base64 strings, or raw block dicts, allowing seamless file delivery (images, documents, archives) directly to OpenClaw.
+- **Universal File & Media Attachments**: Both `chat()` and `chat_stream()` now support an `attachments` parameter accepting local file paths, base64 strings, or raw block dicts, allowing seamless file delivery (images, documents, archives) directly to OpenClaw.
 - **Automated Client-Side Image Compression**: Integrated smart Pillow compression/transcoding into JPEG format (with transparent layer compositing and configurable max dimensions) to substantially reduce bandwidth consumption and transfer latency.
-- **Server-Side MIME Landing (/acp/incoming)**: Media and MIME payload blocks sent through ACP are now automatically extracted and saved to a dedicated incoming directory on the server disk, prepend-injected into the prompt as textual file paths so agent tools can process them locally.
+- **Server-Side MIME Landing (`/acp/incoming`)**: Media and MIME payload blocks sent through ACP are now automatically extracted and saved to a dedicated incoming directory on the server disk, prepend-injected into the prompt as textual file paths so agent tools can process them locally.
 - **Binary MIME Sniffing & Path Sanitization**: Added magic bytes inspection for precise MIME detection (JPEG, PNG, GIF, WebP, PDF, ZIP) and invalid/dummy path filtering during file transfers.
 
 ## 🚀 Version 0.6.1 Updates
