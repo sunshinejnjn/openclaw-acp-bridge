@@ -6,6 +6,7 @@ import base64
 import io
 import zipfile
 import mimetypes
+import tempfile
 import argparse
 import threading
 from http.server import HTTPServer, SimpleHTTPRequestHandler
@@ -346,6 +347,82 @@ async def run_server(host="0.0.0.0", port=18781, is_debug=False, token=None, ope
 
                 if intercepted:
                     continue
+
+                # Check if prompt contains MIME/media blocks (image, resource, audio) to land on disk
+                try:
+                    if method in ["prompt", "session/prompt"]:
+                        params = data.get("params", {})
+                        prompt_list = params.get("prompt", [])
+                        session_id = params.get("sessionId", params.get("session_id", "unknown"))
+
+                        mime_blocks = []
+                        text_blocks = []
+                        for b in prompt_list:
+                            b_type = b.get("type", "")
+                            if b_type in ["image", "resource", "audio"] or b.get("data") or (b.get("resource") or {}).get("blob") or b.get("blob"):
+                                mime_blocks.append(b)
+                            else:
+                                text_blocks.append(b)
+
+                        if mime_blocks:
+                            # 确定系统临时目录下的 /acp/incoming 子目录
+                            incoming_dir = os.path.join(tempfile.gettempdir(), "acp", "incoming")
+                            os.makedirs(incoming_dir, exist_ok=True)
+
+                            saved_file_paths = []
+                            for idx, mb in enumerate(mime_blocks, 1):
+                                raw_b64 = mb.get("data") or (mb.get("resource") or {}).get("blob") or mb.get("blob") or ""
+                                if not raw_b64:
+                                    continue
+
+                                mtype = mb.get("mime_type") or mb.get("mimeType") or (mb.get("resource") or {}).get("mimeType") or "application/octet-stream"
+                                uri = mb.get("uri") or (mb.get("resource") or {}).get("uri") or ""
+
+                                orig_name = os.path.basename(uri.replace("file://", "")) if uri else ""
+                                if not orig_name:
+                                    # 根据 MIME 类型猜测文件扩展名
+                                    ext = mimetypes.guess_extension(mtype) or ".bin"
+                                    if ext == ".jpe":
+                                        ext = ".jpg"
+                                    orig_name = f"incoming_{idx}{ext}"
+
+                                name_base, ext = os.path.splitext(orig_name)
+                                target_path = os.path.join(incoming_dir, orig_name)
+                                counter = 1
+                                # 避免重名：若存在重名文件，则在文件名后追加递增后缀
+                                while os.path.exists(target_path):
+                                    target_path = os.path.join(incoming_dir, f"{name_base}_{counter}{ext}")
+                                    counter += 1
+
+                                try:
+                                    file_bytes = base64.b64decode(raw_b64)
+                                    with open(target_path, "wb") as f_out:
+                                        f_out.write(file_bytes)
+                                    saved_file_paths.append(target_path)
+                                    print(f"[{addr[0]}] [Session: {session_id}] MIME 文件已落盘: {target_path} ({len(file_bytes)} bytes)", file=sys.stderr)
+                                except Exception as e_save:
+                                    print(f"[{addr[0]}] [Session: {session_id}] MIME 文件落盘失败: {e_save}", file=sys.stderr)
+
+                            if saved_file_paths:
+                                # 构造文件绝对路径声明，形如：本消息包括文件1：xxxx.jpg ；文件2：xxxx.zip 。
+                                file_desc_parts = [f"文件{i}：{p}" for i, p in enumerate(saved_file_paths, 1)]
+                                prefix_header = f"本消息包括{' ；'.join(file_desc_parts)} 。\n\n"
+
+                                # 将描述前缀放在最前面，合并所有文本
+                                combined_text = prefix_header
+                                for tb in text_blocks:
+                                    if tb.get("type") == "text":
+                                        combined_text += tb.get("text", "")
+
+                                # 去掉 MIME 部分，最终发给 Agent 的 ACP 消息只包括纯文本部分
+                                new_prompt_list = [{"type": "text", "text": combined_text}]
+                                params["prompt"] = new_prompt_list
+                                data["params"] = params
+
+                                line = json.dumps(data).encode("utf-8") + b"\n"
+                                print(f"[{addr[0]}] [Session: {session_id}] 已转换 MIME 块为纯文本路径说明前缀并转发 OpenClaw", file=sys.stderr)
+                except Exception as e_mime:
+                    if is_debug: print(f"MIME landing processing error: {e_mime}", file=sys.stderr)
 
                 # Forward standard request to the agent
                 if is_debug and method in ["prompt", "session/prompt"]:
