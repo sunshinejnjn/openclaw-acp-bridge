@@ -49,7 +49,7 @@ from openclaw_acp_bridge import OpenClaw
 
 async def main():
     # Connect to the remote bridge
-    async with OpenClaw(host="10.71.253.132", download_dir="my_assets") as client:
+    async with OpenClaw(host="192.168.7.7", download_dir="my_assets") as client:
         # 1. Standard Chat
         response = await client.chat("Hello, who are you?")
         print(f"Agent: {response.text}")
@@ -120,15 +120,10 @@ The package includes a comprehensive test suite `test_bridge.py` that demonstrat
 python test_bridge.py --tests 1,2,3,4
 ```
 
-## 🔄 Version 0.6.0 Updates
+## 🚀 Version 0.7.1 Updates
 
-- **Isolated Agent Targeting (`--agent <agent_name>`)**: Start the bridge with a specific agent name using the `--agent` parameter in the launcher. The bridge handles agent routing and isolated workspace initialization automatically.
-- **Spawned ACP Session Keys**: Spawns isolated session keys in the format `agent:<agent_name>:<session_id>` (e.g. `agent:agentchatter:acp`) instead of overriding the default `main (agent:main:main)` session. This enables multiple bridges and agents to run concurrently without session overlap.
-- **Self-Healing Conflict Resolution**: Automatically stops and resolves stale `openclaw-acp`, `run_acp_server.py`, or `openclaw_acp_bridge` daemon instances on server boot/restart to guarantee a fresh ACP TCP listener.
-- **Standardized systemd Service Template (`openclaw-acp-bridge.service`)**:
-  - Implements complete environment variables configuration (`PATH`, `HOME`, `TMPDIR`) to cleanly load NVM/Node paths.
-  - Implements optimized PID replacement (`exec` substitution) so systemd tracks the Python server directly as the `Main PID` instead of a bash wrapper script.
-  - Uses robust `KillMode=control-group` process management to prevent zombie or orphaned subprocesses.
+- **Sanitized Connection Endpoints**: Standardized all documentation and code examples to use RFC 1918 private IP addresses (`192.168.7.7`).
+- **Organized Changelog**: Chronologically ordered version history across releases (0.7.1 -> 0.7.0 -> 0.6.1 -> 0.6.0) for improved clarity.
 
 ## 🚀 Version 0.7.0 Updates
 
@@ -143,6 +138,16 @@ python test_bridge.py --tests 1,2,3,4
 - **Proactive Dead-Process Detection on Connect**: The server now immediately checks whether the backing OpenClaw process is alive the moment a new client authenticates and connects, triggering an automatic `restart_openclaw_process()` before the first message is forwarded — preventing silent failures on stale sessions.
 - **Debug Log Truncation**: Agent↔Client log lines in `--debug` mode are now capped at 500 characters with a `... (truncated)` suffix, preventing log flooding when large base64 payloads (e.g. images) are exchanged.
 - **Increased TCP Read Buffer**: `asyncio.start_server` is now launched with `limit=16*1024*1024` (16 MB), supporting large prompt payloads such as base64-encoded images that exceed the previous default 64 KB stream buffer.
+
+## 🚀 Version 0.6.0 Updates
+
+- **Isolated Agent Targeting (`--agent <agent_name>`)**: Start the bridge with a specific agent name using the `--agent` parameter in the launcher. The bridge handles agent routing and isolated workspace initialization automatically.
+- **Spawned ACP Session Keys**: Spawns isolated session keys in the format `agent:<agent_name>:<session_id>` (e.g. `agent:agentchatter:acp`) instead of overriding the default `main (agent:main:main)` session. This enables multiple bridges and agents to run concurrently without session overlap.
+- **Self-Healing Conflict Resolution**: Automatically stops and resolves stale `openclaw-acp`, `run_acp_server.py`, or `openclaw_acp_bridge` daemon instances on server boot/restart to guarantee a fresh ACP TCP listener.
+- **Standardized systemd Service Template (`openclaw-acp-bridge.service`)**:
+  - Implements complete environment variables configuration (`PATH`, `HOME`, `TMPDIR`) to cleanly load NVM/Node paths.
+  - Implements optimized PID replacement (`exec` substitution) so systemd tracks the Python server directly as the `Main PID` instead of a bash wrapper script.
+  - Uses robust `KillMode=control-group` process management to prevent zombie or orphaned subprocesses.
 
 ## 📜 License
 BSD 3-Clause

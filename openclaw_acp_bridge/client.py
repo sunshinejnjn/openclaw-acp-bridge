@@ -351,7 +351,7 @@ class OpenClaw:
     A high-level client for interacting with OpenClaw via the ACP TCP Bridge.
     
     Usage:
-        async with OpenClaw(host="10.71.253.132", token="...") as client:
+        async with OpenClaw(host="192.168.7.7", token="...") as client:
             response = await client.chat("Hello!")
             print(response)
     """
