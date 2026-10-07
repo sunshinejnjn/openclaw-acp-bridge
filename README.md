@@ -130,13 +130,20 @@ python test_bridge.py --tests 1,2,3,4
   - Implements optimized PID replacement (`exec` substitution) so systemd tracks the Python server directly as the `Main PID` instead of a bash wrapper script.
   - Uses robust `KillMode=control-group` process management to prevent zombie or orphaned subprocesses.
 
-## � Version 0.6.1 Updates
+## 🚀 Version 0.7.0 Updates
+
+- **Universal File & Media Attachments**: Both chat() and chat_stream() now support an ttachments parameter accepting local file paths, base64 strings, or raw block dicts, allowing seamless file delivery (images, documents, archives) directly to OpenClaw.
+- **Automated Client-Side Image Compression**: Integrated smart Pillow compression/transcoding into JPEG format (with transparent layer compositing and configurable max dimensions) to substantially reduce bandwidth consumption and transfer latency.
+- **Server-Side MIME Landing (/acp/incoming)**: Media and MIME payload blocks sent through ACP are now automatically extracted and saved to a dedicated incoming directory on the server disk, prepend-injected into the prompt as textual file paths so agent tools can process them locally.
+- **Binary MIME Sniffing & Path Sanitization**: Added magic bytes inspection for precise MIME detection (JPEG, PNG, GIF, WebP, PDF, ZIP) and invalid/dummy path filtering during file transfers.
+
+## 🚀 Version 0.6.1 Updates
 
 - **Multimodal `chat_stream` Support**: `chat_stream()` now accepts an optional `image_data` (base64-encoded bytes) and `image_mime` parameter, allowing image+text prompts to be sent to the agent in a single streaming call. Enables i2i (image-to-image) and vision-based agentic workflows without a separate API.
 - **Proactive Dead-Process Detection on Connect**: The server now immediately checks whether the backing OpenClaw process is alive the moment a new client authenticates and connects, triggering an automatic `restart_openclaw_process()` before the first message is forwarded — preventing silent failures on stale sessions.
 - **Debug Log Truncation**: Agent↔Client log lines in `--debug` mode are now capped at 500 characters with a `... (truncated)` suffix, preventing log flooding when large base64 payloads (e.g. images) are exchanged.
 - **Increased TCP Read Buffer**: `asyncio.start_server` is now launched with `limit=16*1024*1024` (16 MB), supporting large prompt payloads such as base64-encoded images that exceed the previous default 64 KB stream buffer.
 
-## �📜 License
+## 📜 License
 BSD 3-Clause
 
